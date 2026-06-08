@@ -71,6 +71,19 @@ body{
   margin-top:8px
 }
 .card-global .price{color:#f0d080}
+.card-bar-buy{border-left:3px solid #5da9e9;margin-top:0}
+.card-bar-buy .price{color:#5da9e9}
+.card-bar-sell{border-left:3px solid #9b59b6}
+.card-bar-sell .price{color:#bb86fc}
+.section-divider{
+  text-align:center;
+  font-size:11px;
+  color:#555;
+  padding:8px 0 4px;
+  letter-spacing:2px;
+  border-top:1px solid rgba(255,255,255,0.05);
+  margin-top:8px
+}
 .diff{
   display:inline-block;
   margin-top:8px;
@@ -142,18 +155,32 @@ body{
       <div class="diff" id="global-change"></div>
     </div>
 
-    <!-- 你买入（买首饰） -->
+    <!-- 首饰 -->
     <div class="card card-sell">
       <div class="label">💛 你买入（买首饰）</div>
       <div class="price" id="sell-price">--</div>
       <div class="currency">元/克 · 你付给金店</div>
     </div>
 
-    <!-- 你卖出（回收变现） -->
     <div class="card card-buy">
       <div class="label">♻️ 你卖出（回收变现）</div>
       <div class="price" id="buy-price">--</div>
       <div class="currency">元/克 · 金店付给你</div>
+    </div>
+
+    <!-- 投资金条 -->
+    <div class="section-divider">———  📀 投资金条  ———</div>
+
+    <div class="card card-bar-buy">
+      <div class="label">📀 你买金条（投资）</div>
+      <div class="price" id="bar-buy-price">--</div>
+      <div class="currency">元/克 · 银行工费溢价</div>
+    </div>
+
+    <div class="card card-bar-sell">
+      <div class="label">📀 你卖金条（回收）</div>
+      <div class="price" id="bar-sell-price">--</div>
+      <div class="currency">元/克 · 接近国际金价</div>
     </div>
 
     <div class="rate-info">
@@ -173,8 +200,10 @@ body{
 
 <script>
 const CONFIG = {
-  SELL_MARKUP: 1.1811,
-  BUY_FACTOR: 0.9825,
+  SELL_MARKUP: 1.1811,      // 你买首饰 = 国际价 × 1.1811
+  BUY_FACTOR: 0.9825,       // 回收变现 = 国际价 × 0.9825
+  BAR_BUY_MARKUP: 1.04,     // 买金条 = 国际价 + 约4%工费
+  BAR_SELL_FACTOR: 0.99,    // 卖金条 = 国际价 - 约1%折价
   OZ_TO_G: 31.1035,
   REFRESH_INTERVAL: 30000
 };
@@ -191,7 +220,9 @@ function calcPrices(xauUsd, usdCny) {
   const cnyPerGram = xauUsd * usdCny / CONFIG.OZ_TO_G;
   const sellPrice = cnyPerGram * CONFIG.SELL_MARKUP;
   const buyPrice = cnyPerGram * CONFIG.BUY_FACTOR;
-  return { cnyPerGram, sellPrice, buyPrice };
+  const barBuyPrice = cnyPerGram * CONFIG.BAR_BUY_MARKUP;
+  const barSellPrice = cnyPerGram * CONFIG.BAR_SELL_FACTOR;
+  return { cnyPerGram, sellPrice, buyPrice, barBuyPrice, barSellPrice };
 }
 
 function formatPrice(v) { return '¥' + v.toFixed(2); }
@@ -222,7 +253,7 @@ async function updatePrices() {
     const xauUsd = goldData.price;
     const usdCny = fxData.rates.CNY;
 
-    const { cnyPerGram, sellPrice, buyPrice } = calcPrices(xauUsd, usdCny);
+    const { cnyPerGram, sellPrice, buyPrice, barBuyPrice, barSellPrice } = calcPrices(xauUsd, usdCny);
 
     // Global price CNY/g
     document.getElementById('global-price-cny').textContent = formatPrice(cnyPerGram);
@@ -232,11 +263,13 @@ async function updatePrices() {
     document.getElementById('global-change').innerHTML = renderDiff(change);
     lastGlobalPrice = cnyPerGram;
 
-    // Sell (you buy jewelry)
+    // Jewelry
     document.getElementById('sell-price').textContent = formatPrice(sellPrice);
-
-    // Buy (you sell scrap)
     document.getElementById('buy-price').textContent = formatPrice(buyPrice);
+
+    // Gold bars
+    document.getElementById('bar-buy-price').textContent = formatPrice(barBuyPrice);
+    document.getElementById('bar-sell-price').textContent = formatPrice(barSellPrice);
 
     // Rate info
     document.getElementById('rate-usdcny').textContent = `汇率: ${usdCny.toFixed(4)}`;

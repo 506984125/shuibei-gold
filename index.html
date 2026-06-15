@@ -75,6 +75,12 @@ body{
 .card-bar-buy .price{color:#5da9e9}
 .card-bar-sell{border-left:3px solid #9b59b6}
 .card-bar-sell .price{color:#bb86fc}
+.card-hk{border-left:3px solid #ff6b35}
+.card-hk .price{color:#ff9f43}
+.card-hk-sell{border-left:3px solid #6c5ce7}
+.card-hk-sell .price{color:#a29bfe}
+.card-hk-bar{border-left:3px solid #00b894}
+.card-hk-bar .price{color:#55efc4}
 .section-divider{
   text-align:center;
   font-size:11px;
@@ -183,9 +189,31 @@ body{
       <div class="currency">元/克 · 接近国际金价</div>
     </div>
 
+    <!-- 香港黄金 -->
+    <div class="section-divider">———  🇭🇰 香港黄金行情  ———</div>
+
+    <div class="card card-hk">
+      <div class="label">🇭🇰 香港饰金买入</div>
+      <div class="price" id="hk-jewelry-hkd">--</div>
+      <div class="currency" id="hk-jewelry-cny">-- 元/克 · 另加手工费约2-6%</div>
+    </div>
+
+    <div class="card card-hk-sell">
+      <div class="label">🇭🇰 香港饰金回收</div>
+      <div class="price" id="hk-recycle-hkd">--</div>
+      <div class="currency" id="hk-recycle-cny">-- 元/克</div>
+    </div>
+
+    <div class="card card-hk-bar">
+      <div class="label">🇭🇰 香港金条</div>
+      <div class="price" id="hk-bar-hkd">--</div>
+      <div class="currency" id="hk-bar-cny">-- 元/克</div>
+    </div>
+
     <div class="rate-info">
       <span id="rate-usdcny">汇率: --</span>
       <span id="rate-xau">金价: -- USD/oz</span>
+      <span id="rate-hkdcny">港币: --</span>
     </div>
 
     <div class="updating-indicator" id="updating-indicator">⚡ 每30秒自动刷新</div>
@@ -204,6 +232,9 @@ const CONFIG = {
   BUY_FACTOR: 0.9825,       // 回收变现 = 国际价 × 0.9825
   BAR_BUY_MARKUP: 1.04,     // 买金条 = 国际价 + 约4%工费
   BAR_SELL_FACTOR: 0.99,    // 卖金条 = 国际价 - 约1%折价
+  HK_JEWELRY_MARKUP: 1.045,   // 香港饰金买入 ≈ 国际价 + 4.5%（不含手工费）
+  HK_RECYCLE_FACTOR: 0.985,   // 香港饰金回收 ≈ 国际价 - 1.5%
+  HK_BAR_MARKUP: 1.01,        // 香港金条买入 ≈ 国际价 + 1%
   OZ_TO_G: 31.1035,
   REFRESH_INTERVAL: 30000
 };
@@ -252,8 +283,15 @@ async function updatePrices() {
 
     const xauUsd = goldData.price;
     const usdCny = fxData.rates.CNY;
+    const usdHkd = fxData.rates.HKD;
 
     const { cnyPerGram, sellPrice, buyPrice, barBuyPrice, barSellPrice } = calcPrices(xauUsd, usdCny);
+
+    // HK prices
+    const hkdPerGram = xauUsd * usdHkd / CONFIG.OZ_TO_G;
+    const hkJewelryHkd = hkdPerGram * CONFIG.HK_JEWELRY_MARKUP;
+    const hkRecycleHkd = hkdPerGram * CONFIG.HK_RECYCLE_FACTOR;
+    const hkBarHkd = hkdPerGram * CONFIG.HK_BAR_MARKUP;
 
     // Global price CNY/g
     document.getElementById('global-price-cny').textContent = formatPrice(cnyPerGram);
@@ -271,11 +309,19 @@ async function updatePrices() {
     document.getElementById('bar-buy-price').textContent = formatPrice(barBuyPrice);
     document.getElementById('bar-sell-price').textContent = formatPrice(barSellPrice);
 
+    // Hong Kong prices (HKD + approximate CNY)
+    const hkCnyRate = usdCny / usdHkd;
+    document.getElementById('hk-jewelry-hkd').textContent = 'HK$' + hkJewelryHkd.toFixed(2);
+    document.getElementById('hk-jewelry-cny').textContent = '≈¥' + (hkJewelryHkd * hkCnyRate).toFixed(2) + ' 元/克 · 另加手工费约2-6%';
+    document.getElementById('hk-recycle-hkd').textContent = 'HK$' + hkRecycleHkd.toFixed(2);
+    document.getElementById('hk-recycle-cny').textContent = '≈¥' + (hkRecycleHkd * hkCnyRate).toFixed(2) + ' 元/克';
+    document.getElementById('hk-bar-hkd').textContent = 'HK$' + hkBarHkd.toFixed(2);
+    document.getElementById('hk-bar-cny').textContent = '≈¥' + (hkBarHkd * hkCnyRate).toFixed(2) + ' 元/克';
+
     // Rate info
     document.getElementById('rate-usdcny').textContent = `汇率: ${usdCny.toFixed(4)}`;
     document.getElementById('rate-xau').textContent = `金价: $${xauUsd.toFixed(2)}/oz`;
-
-    // Last update time
+    document.getElementById('rate-hkdcny').textContent = `港币: ${(usdCny/usdHkd).toFixed(4)}`;
     document.getElementById('last-update').textContent = '更新于 ' + new Date().toLocaleString('zh-CN');
 
     // Hide loading, show cards
